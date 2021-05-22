@@ -4,16 +4,31 @@ import scala.language.implicitConversions
 
 trait Semigroup[A] {
   def combine(x: A, y: A): A
+  
+  def union(x: A, y: A): A
+  
+  def intersection(x: A, y: A): A
 }
 
 object Semigroup{
   implicit val doubleSemigroup = new Semigroup[Set[Double]] {
-    override def combine(x: Set[Double], y: Set[Double]): Set[Double] = x ++ y
+    override def combine(x: Set[Double], y: Set[Double]):
+    Set[Double] = x ++ y
+    
+    override def union(x: Set[Double], y: Set[Double]):
+    Set[Double] = x | y
+    
+    override def intersection(x: Set[Double], y: Set[Double]):
+    Set[Double] = x & y
   }
 }
 
 class SemigroupOps[A: Semigroup](x: A)(implicit g: Semigroup[A]){
   def **(y: A): A = g.combine(x, y)
+  
+  def ||(y: A): A = g.union(x, y)
+  
+  def &&(y: A): A = g.intersection(x, y)
 }
 
 object L1 {
@@ -21,14 +36,30 @@ object L1 {
     implicit def sg[A](x: A)(implicit g: Semigroup[A]): SemigroupOps[A] = {
       new SemigroupOps[A](x)
     }
-    
-/*  var s1 : Set[Double] = Set(1.6, 3.15, 4.14)
-  var s2 : Set[Double] = Set(7.21, 1.4, 3.06)
-  var s3 : Set[Double] = Set(1.5, 1.08) */
 
-    val associate = forAll { (a: Set[Double], b: Set[Double], c: Set[Double]) =>
-(a ** b) ** c == a ** (b ** c)      
+    val assocComb = forAll { 
+      (a: Set[Double], b: Set[Double], c: Set[Double]) =>
+      (a ** b) ** c == a ** (b ** c)      
     }
-    associate.check()
+        
+    val assocUn = forAll { 
+      (a: Set[Double], b: Set[Double], c: Set[Double]) =>
+      var s1 : Set[Double] = (a || b) || c
+      var s2 : Set[Double] = a || (b || c)
+      s1 == s2     
+    }
+    
+    val assocIn = forAll { 
+      (a: Set[Double], b: Set[Double], c: Set[Double]) =>
+      var s1 : Set[Double] = (a && b) && c
+      var s2 : Set[Double] = a && (b && c)
+      s1 == s2      
+    }
+    
+    assocComb.check()
+    
+    assocUn.check()
+    
+    assocIn.check()
   }
 }
